@@ -26,3 +26,7 @@ let ``Strings are generated as strings``() =
 [<Test>]
 let ``Bools are generated as bools``() =
    check <@@ true @@>
+
+[<Test>]
+let ``Decimals are generated as numbers`` () =
+    checkAreEqual 1.345 <@@ 1.345M @@>

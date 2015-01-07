@@ -2,6 +2,14 @@
 
 open AST
 open Microsoft.FSharp.Quotations
+open Patterns
+
+let private (|MakeDecimalCall|_|) = 
+    function
+    | Patterns.Call(None, mi, [Value(lo ,_);Value(mid,_);Value(hi,_);Value(isNegative,_);Value(scale,_)])
+            when mi.Name = "MakeDecimal" -> 
+            Some <| MakeDecimalCall (new System.Decimal(unbox lo,unbox mid,unbox hi,unbox isNegative,unbox scale))
+    | _ -> None
 
 let private primitiveValues =
    CompilerComponent.create <| fun _ _ returnStategy ->
@@ -20,6 +28,8 @@ let private primitiveValues =
       | DerivedPatterns.UInt64 x -> [ yield returnStategy.Return <| Number(float x) ]
       | DerivedPatterns.Single x -> [ yield returnStategy.Return <| Number(float x) ]
       | DerivedPatterns.Double x -> [ yield returnStategy.Return <| Number(x) ]
+       // WARN: provisional decimal conversion to float
+      | MakeDecimalCall x -> [yield returnStategy.Return <| Number (System.Convert.ToDouble(x)) ]
       // TODO: our own decimal type?
       | Patterns.Value(null, _) -> [ yield returnStategy.Return <| Null ]
       | Patterns.Value(x, t) ->
