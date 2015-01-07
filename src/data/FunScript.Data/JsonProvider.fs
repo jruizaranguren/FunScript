@@ -5,6 +5,7 @@
 module private FunScript.Data.JsonProvider
 
 open System
+open System.Globalization
 open FunScript
 open FSharp.Data
 open FSharp.Data.Runtime
@@ -27,6 +28,24 @@ module JsHelpers =
 // Reimplementation of the Json Type Provider runtime 
 
 #nowarn "10001"
+
+[<JS>]
+type JsDocument = 
+     
+    private { 
+                Json : JsonValue
+                Path : string }
+
+    interface IJsonDocument with
+        member x.JsonValue = x.Json
+        member x.Path() = x.Path
+        member x.CreateNew(value,pathInc) = JsDocument.Create(value, x.Path + pathInc)
+
+    static member Create(value,path) = 
+        {
+            Json = value
+            Path = path
+        } :> IJsonDocument
 
 [<JS>]
 type JsRuntime = 
@@ -71,6 +90,37 @@ type JsRuntime =
   [<JSEmit("return {2};")>]
   static member Identity3Of3(arg:obj, arg2:obj, arg3:obj) : obj = failwith "never"
 
+   static member inline OptionToJson f = function None -> JsonValue.Null | Some v -> f v
+
+  static member private ToJsonValue (cultureInfo:CultureInfo) (value:obj) = 
+    match value with
+    | null -> JsonValue.Null
+    | :? Array                   as v -> JsonValue.Array [| for elem in v -> JsRuntime.ToJsonValue cultureInfo elem |]
+
+    | :? string                  as v -> JsonValue.String v
+    | :? DateTime                as v -> v.ToString(cultureInfo) |> JsonValue.String
+    | :? int                     as v -> JsonValue.Number(decimal v)
+    | :? int64                   as v -> JsonValue.Number(decimal v)
+    | :? float                   as v -> JsonValue.Number(decimal v)
+    | :? decimal                 as v -> JsonValue.Number v
+    | :? bool                    as v -> JsonValue.Boolean v
+    | :? Guid                    as v -> v.ToString() |> JsonValue.String
+    | :? IJsonDocument           as v -> v.JsonValue
+    | :? JsonValue               as v -> v
+
+    | :? option<string>          as v -> JsRuntime.OptionToJson JsonValue.String v
+    | :? option<DateTime>        as v -> JsRuntime.OptionToJson (fun (dt:DateTime) -> dt.ToString(cultureInfo) |> JsonValue.String) v
+    | :? option<int>             as v -> JsRuntime.OptionToJson (decimal >> JsonValue.Number) v
+    | :? option<int64>           as v -> JsRuntime.OptionToJson (decimal >> JsonValue.Number) v
+    | :? option<float>           as v -> JsRuntime.OptionToJson (decimal >> JsonValue.Number) v
+    | :? option<decimal>         as v -> JsRuntime.OptionToJson JsonValue.Number v
+    | :? option<bool>            as v -> JsRuntime.OptionToJson JsonValue.Boolean v
+    | :? option<Guid>            as v -> JsRuntime.OptionToJson (fun (g:Guid) -> g.ToString() |> JsonValue.String) v
+    | :? option<IJsonDocument>   as v -> JsRuntime.OptionToJson (fun (v:IJsonDocument) -> v.JsonValue) v
+    | :? option<JsonValue>       as v -> JsRuntime.OptionToJson id v
+
+    | _ -> failwithf "Can't create JsonValue from %A" value
+
   // The `GetArrayChildrenByTypeTag` is a JS reimplementation of the
   // equivalent in the JSON type provider. The following functions
   // are derived (copied from JSON provider code)
@@ -114,6 +164,30 @@ type JsRuntime =
   // In the dynamic world, this does not do anything at all :-)  
   [<JSEmit("return {0};")>]
   static member ConvertArray<'T>(value:IJsonDocument, mapping:Func<IJsonDocument, 'T>) : 'T[] = failwith "never"
+
+  static member CreateRecord (properties, cultureStr) : IJsonDocument =  
+    let cultureInfo = TextRuntime.GetCulture cultureStr
+    let json =
+        properties
+        |> Array.map (fun (k, v:obj) -> k, JsRuntime.ToJsonValue cultureInfo v)
+        |> JsonValue.Record
+    JsDocument.Create(json, "")
+
+  static member CreateArray (elements, cultureStr) = 
+    let cultureInfo = TextRuntime.GetCulture cultureStr
+    let json = 
+      elements 
+      |> Array.collect (JsRuntime.ToJsonValue cultureInfo
+                        >>
+                        function JsonValue.Array elements -> elements | JsonValue.Null -> [| |] | element -> [| element |])
+      |> JsonValue.Array
+    JsDocument.Create(json, "")
+
+  static member CreateValue(value, cultureStr) =
+    let cultureInfo = TextRuntime.GetCulture cultureStr
+    let json = JsRuntime.ToJsonValue cultureInfo value
+    JsDocument.Create(json, "")
+
 
 // --------------------------------------------------------------------------------------
 // Define the mappings
@@ -166,4 +240,8 @@ let getComponents() =
     ExpressionReplacer.createUnsafe <@ JsonRuntime.TryGetArrayChildByTypeTag @> <@ JsRuntime.TryGetArrayChildByTypeTag @>
     ExpressionReplacer.createUnsafe <@ JsonRuntime.GetArrayChildByTypeTag @> <@ JsRuntime.GetArrayChildByTypeTag @>
     ExpressionReplacer.createUnsafe <@ JsonRuntime.TryGetValueByTypeTag @> <@ JsRuntime.TryGetValueByTypeTag @>
+        
+    ExpressionReplacer.createUnsafe <@ JsonRuntime.CreateValue @> <@ JsRuntime.CreateValue @>
+    ExpressionReplacer.createUnsafe <@ JsonRuntime.CreateArray @> <@ JsRuntime.CreateArray @>
+    ExpressionReplacer.createUnsafe <@ JsonRuntime.CreateRecord @> <@ JsRuntime.CreateRecord @>
   ]
