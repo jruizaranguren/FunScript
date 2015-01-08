@@ -93,33 +93,53 @@ type JsRuntime =
    static member inline OptionToJson f = function None -> JsonValue.Null | Some v -> f v
 
   static member private ToJsonValue (cultureInfo:CultureInfo) (value:obj) = 
-    match value with
-    | null -> JsonValue.Null
-    | :? Array                   as v -> JsonValue.Array [| for elem in v -> JsRuntime.ToJsonValue cultureInfo elem |]
-
-    | :? string                  as v -> JsonValue.String v
-    | :? DateTime                as v -> v.ToString(cultureInfo) |> JsonValue.String
-    | :? int                     as v -> JsonValue.Number(decimal v)
-    | :? int64                   as v -> JsonValue.Number(decimal v)
-    | :? float                   as v -> JsonValue.Number(decimal v)
-    | :? decimal                 as v -> JsonValue.Number v
-    | :? bool                    as v -> JsonValue.Boolean v
-    | :? Guid                    as v -> v.ToString() |> JsonValue.String
-    | :? IJsonDocument           as v -> v.JsonValue
-    | :? JsonValue               as v -> v
-
-    | :? option<string>          as v -> JsRuntime.OptionToJson JsonValue.String v
-    | :? option<DateTime>        as v -> JsRuntime.OptionToJson (fun (dt:DateTime) -> dt.ToString(cultureInfo) |> JsonValue.String) v
-    | :? option<int>             as v -> JsRuntime.OptionToJson (decimal >> JsonValue.Number) v
-    | :? option<int64>           as v -> JsRuntime.OptionToJson (decimal >> JsonValue.Number) v
-    | :? option<float>           as v -> JsRuntime.OptionToJson (decimal >> JsonValue.Number) v
-    | :? option<decimal>         as v -> JsRuntime.OptionToJson JsonValue.Number v
-    | :? option<bool>            as v -> JsRuntime.OptionToJson JsonValue.Boolean v
-    | :? option<Guid>            as v -> JsRuntime.OptionToJson (fun (g:Guid) -> g.ToString() |> JsonValue.String) v
-    | :? option<IJsonDocument>   as v -> JsRuntime.OptionToJson (fun (v:IJsonDocument) -> v.JsonValue) v
-    | :? option<JsonValue>       as v -> JsRuntime.OptionToJson id v
-
-    | _ -> failwithf "Can't create JsonValue from %A" value
+    if value = null then JsonValue.Null
+    else
+        let tname = value.GetType().FullName
+        if tname = typeof<Array>.FullName then
+            JsonValue.Array [| for elem in (value :?> Array) -> JsRuntime.ToJsonValue cultureInfo elem |]
+        elif tname = typeof<string>.FullName then
+            JsonValue.String (value :?> string)
+        elif tname = typeof<DateTime>.FullName then
+            (value :?> DateTime).ToString(cultureInfo) |> JsonValue.String
+        elif tname = typeof<int>.FullName then
+            JsonValue.Number(value :?> decimal)
+        elif tname = typeof<int64>.FullName then
+            JsonValue.Number(value :?> decimal)
+        elif tname = typeof<float>.FullName then
+            JsonValue.Number(value :?> decimal)
+        elif tname = typeof<decimal>.FullName then
+            JsonValue.Number(value :?> decimal)
+        elif tname = typeof<bool>.FullName then
+            JsonValue.Boolean(value :?> bool)
+        elif tname = typeof<Guid>.FullName then
+            JsonValue.String <| value.ToString()
+        elif tname = typeof<IJsonDocument>.FullName then
+            (value :?> IJsonDocument).JsonValue
+        elif tname = typeof<JsonValue>.FullName then
+            (value :?> JsonValue)
+        elif tname = typeof<string option>.FullName then
+            JsRuntime.OptionToJson JsonValue.String (value :?> string option)
+        elif tname = typeof<DateTime option>.FullName then
+            JsRuntime.OptionToJson (fun (dt:DateTime) -> dt.ToString(cultureInfo) |> JsonValue.String) (value :?> DateTime option)
+        elif tname = typeof<int option>.FullName then
+            JsRuntime.OptionToJson (decimal >> JsonValue.Number) (value :?> decimal option)
+        elif tname = typeof<int64 option>.FullName then
+            JsRuntime.OptionToJson (decimal >> JsonValue.Number) (value :?> decimal option)
+        elif tname = typeof<float option>.FullName then
+            JsRuntime.OptionToJson (decimal >> JsonValue.Number) (value :?> decimal option)
+        elif tname = typeof<decimal option>.FullName then
+            JsRuntime.OptionToJson (decimal >> JsonValue.Number) (value :?> decimal option)
+        elif tname = typeof<bool option>.FullName then
+            JsRuntime.OptionToJson JsonValue.Boolean (value :?> bool option)
+        elif tname = typeof<Guid option>.FullName then
+            JsRuntime.OptionToJson (fun (g:Guid) -> g.ToString() |> JsonValue.String) (value :?> Guid option)
+        elif tname = typeof<IJsonDocument option>.FullName then
+            JsRuntime.OptionToJson (fun (v:IJsonDocument) -> v.JsonValue) (value :?> IJsonDocument option)
+        elif tname = typeof<JsonValue option>.FullName then
+            JsRuntime.OptionToJson id (value :?> JsonValue option)
+        else
+            failwith <| String.Format("Can't create JsonValue from %A", value) 
 
   // The `GetArrayChildrenByTypeTag` is a JS reimplementation of the
   // equivalent in the JSON type provider. The following functions

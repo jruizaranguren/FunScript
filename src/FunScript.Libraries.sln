@@ -5,8 +5,6 @@ VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FunScript.Data", "data\FunScript.Data\FunScript.Data.fsproj", "{A2244B1E-625C-4C6C-8E00-38755B8613BB}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FunScript.Data.Tests", "data\FunScript.Data.Tests\FunScript.Data.Tests.fsproj", "{6A626009-89B9-4634-A831-6337C51AB4FF}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,10 +15,6 @@ Global
 		{A2244B1E-625C-4C6C-8E00-38755B8613BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A2244B1E-625C-4C6C-8E00-38755B8613BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A2244B1E-625C-4C6C-8E00-38755B8613BB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6A626009-89B9-4634-A831-6337C51AB4FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6A626009-89B9-4634-A831-6337C51AB4FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6A626009-89B9-4634-A831-6337C51AB4FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6A626009-89B9-4634-A831-6337C51AB4FF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
