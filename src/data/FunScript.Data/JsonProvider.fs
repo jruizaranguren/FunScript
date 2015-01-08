@@ -90,10 +90,10 @@ type JsRuntime =
   [<JSEmit("return {2};")>]
   static member Identity3Of3(arg:obj, arg2:obj, arg3:obj) : obj = failwith "never"
 
-   static member inline OptionToJson f = function None -> JsonValue.Null | Some v -> f v
+  static member inline OptionToJson f = function None -> JsonValue.Null | Some v -> f v
 
   static member private ToJsonValue (cultureInfo:CultureInfo) (value:obj) = 
-    if value = null then JsonValue.Null
+    if isNull value then JsonValue.Null
     else
         let tname = value.GetType().FullName
         if tname = typeof<Array>.FullName then
